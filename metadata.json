@@ -1,0 +1,6 @@
+{
+  "name": "SmartBroker CRM / ImobLead AI",
+  "description": "Plataforma SaaS de CRM imobiliário com rastreamento comportamental, lead scoring, catálogo de imóveis e insights gerados por Inteligência Artificial.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
