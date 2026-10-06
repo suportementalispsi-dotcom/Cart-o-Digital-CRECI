@@ -117,12 +117,27 @@
       
       <!-- TOP NAVIGATION HEADER Bar -->
       <header class="h-16 border-b border-slate-850/80 bg-slate-900/60 px-6 backdrop-blur-md flex items-center justify-between z-10">
-        <div class="flex items-center gap-2 font-mono text-xs text-slate-400">
-          <i data-lucide="shield-check" class="text-amber-500 h-4 w-4"></i>
-          <span>Status:</span> <strong class="text-emerald-500 select-all" id="systemSyncStatus">● SISTEMA CONECTADO</strong>
+        <div class="flex items-center gap-3 font-mono text-xs text-slate-400">
+          <div class="flex items-center gap-1.5">
+            <i data-lucide="shield-check" class="text-amber-500 h-4 w-4"></i>
+            <span class="hidden sm:inline">Status:</span> <strong class="text-emerald-500 select-all" id="systemSyncStatus">● ONLINE</strong>
+          </div>
+          <!-- Realtime Safe Save Indicator -->
+          <div id="globalSaveStatusBadge" class="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full transition-all">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-emerald-400 font-mono text-[9px] font-bold">Gravação Ativa ✓</span>
+          </div>
         </div>
 
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-3">
+          <!-- Manual Save Trigger Button -->
+          <button onclick="manualSaveTrigger()" title="Clique para forçar a gravação imediata de todos os dados no navegador"
+            class="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500/15 to-amber-600/15 hover:from-amber-500 hover:to-amber-600 border border-amber-500/30 hover:border-amber-500 text-amber-400 hover:text-black font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition cursor-pointer shadow-sm">
+            <i data-lucide="save" class="h-3.5 w-3.5"></i>
+            <span class="hidden md:inline">Gravar Alterações</span>
+            <span class="md:hidden">Salvar</span>
+          </button>
+
           <!-- Notification Bell -->
           <div class="relative cursor-pointer max-md:hidden" onclick="switchTab('dashboard')">
             <span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[8px] font-black text-white" id="notificationBadge">2</span>
@@ -230,6 +245,12 @@
                 <span class="text-[9px] font-black uppercase text-slate-500 block font-mono">Portfólio de Imóveis:</span>
                 <span class="text-[8.5px] text-amber-500 font-mono">Catálogo Ativo</span>
               </div>
+              <!-- Visitor Filter Pills (Venda / Aluguel) -->
+              <div class="flex items-center gap-1.5 pb-1">
+                <button onclick="setVisitorPropFilter('all')" id="vFilter-all" class="px-2 py-0.5 rounded-md text-[8px] font-bold bg-amber-500 text-black cursor-pointer transition">Todos</button>
+                <button onclick="setVisitorPropFilter('venda')" id="vFilter-venda" class="px-2 py-0.5 rounded-md text-[8px] font-bold bg-slate-900 text-slate-400 border border-slate-800 hover:text-white cursor-pointer transition">🏷️ Venda</button>
+                <button onclick="setVisitorPropFilter('aluguel')" id="vFilter-aluguel" class="px-2 py-0.5 rounded-md text-[8px] font-bold bg-slate-900 text-slate-400 border border-slate-800 hover:text-white cursor-pointer transition">🔑 Aluguel</button>
+              </div>
               <div class="space-y-2" id="visitorCardPropertiesList">
                 <!-- Dynamically populated portfolio list -->
               </div>
@@ -333,54 +354,142 @@
   </div>
 
   <!-- ADD PROPERTY QUICK MODAL -->
-  <div id="addPropModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-md w-full text-left space-y-5 shadow-2xl relative">
+  <div id="addPropModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-2xl w-full text-left space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto">
       <button onclick="closeModal('addPropModal')" class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-100 bg-slate-950/40 border border-slate-800 rounded-xl transition cursor-pointer">
         <i data-lucide="x" class="h-5 w-5"></i>
       </button>
 
-      <div>
-        <h3 class="text-base font-black text-slate-100 uppercase tracking-tight">Cadastrar Novo Imóvel no Portfólio</h3>
-        <p class="text-[9.5px] text-slate-400 uppercase font-mono">Gestão de Inventário</p>
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl">
+          <i data-lucide="plus-circle" class="h-5 w-5"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-black text-slate-100 uppercase tracking-tight">Cadastrar Novo Imóvel</h3>
+          <p class="text-[9.5px] text-slate-400 uppercase font-mono">Venda ou Aluguel • Cobertura, Apartamento, Casa, Fazenda e mais</p>
+        </div>
       </div>
 
-      <form class="space-y-3" id="addPropForm" onsubmit="handleNewPropertySubmit(event)">
+      <form class="space-y-4" id="addPropForm" onsubmit="handleNewPropertySubmit(event)">
+        <!-- 1. TÍTULO E MODALIDADE -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Título do Imóvel:</label>
+            <input type="text" id="addPropTitle" required placeholder="Ex: Fazenda Santa Maria / Cobertura Duos" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3.5 py-2 text-xs text-white outline-none">
+          </div>
+          <div>
+            <label class="text-[10px] text-amber-400 uppercase font-bold block mb-1">Sessão / Negociação:</label>
+            <select id="addPropModality" class="w-full bg-slate-950 border border-amber-500/40 focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-amber-300 font-bold outline-none cursor-pointer">
+              <option value="venda">🏷️ VENDA</option>
+              <option value="aluguel">🔑 ALUGUEL</option>
+              <option value="ambos">🏷️🔑 VENDA & ALUGUEL</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 2. VALORES (VENDA, ALUGUEL, CONDOMÍNIO, IPTU) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950/60 p-3 rounded-2xl border border-slate-850">
+          <div>
+            <label class="text-[9.5px] text-slate-400 uppercase font-bold block mb-1">Preço Venda (R$):</label>
+            <input type="number" id="addPropPrice" value="1200000" class="w-full bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-amber-400 font-mono font-bold outline-none">
+          </div>
+          <div>
+            <label class="text-[9.5px] text-slate-400 uppercase font-bold block mb-1">Aluguel (R$/mês):</label>
+            <input type="number" id="addPropRentalPrice" placeholder="0" class="w-full bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono font-bold outline-none">
+          </div>
+          <div>
+            <label class="text-[9.5px] text-slate-400 uppercase font-bold block mb-1">Condomínio (R$):</label>
+            <input type="number" id="addPropCondoPrice" value="850" class="w-full bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono outline-none">
+          </div>
+          <div>
+            <label class="text-[9.5px] text-slate-400 uppercase font-bold block mb-1">IPTU Mensal (R$):</label>
+            <input type="number" id="addPropIptuPrice" value="220" class="w-full bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono outline-none">
+          </div>
+        </div>
+
+        <!-- 3. TIPOLOGIA, BAIRRO, CIDADE -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Tipo de Imóvel:</label>
+            <select id="addPropType" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none cursor-pointer">
+              <option value="Apartamento">Apartamento Padrão / Alto Padrão</option>
+              <option value="Cobertura">Cobertura Duplex / Triplex</option>
+              <option value="Casa">Casa / Condomínio Fechado</option>
+              <option value="Fazenda">Fazenda / Haras / Agronegócio</option>
+              <option value="Mansão">Mansão / Villa Exclusiva</option>
+              <option value="Chácara/Sítio">Chácara / Sítio de Lazer</option>
+              <option value="Terreno">Terreno / Loteamento</option>
+              <option value="Comercial">Comercial / Sala / Corporativo</option>
+              <option value="Flat/Studio">Flat / Studio / Loft</option>
+              <option value="Galpão">Galpão Logístico / Industrial</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Bairro / Localidade:</label>
+            <input type="text" id="addPropNeighborhood" required value="Umarizal" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-white outline-none">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Cidade / UF:</label>
+            <input type="text" id="addPropCity" required value="Belém" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-white outline-none">
+          </div>
+        </div>
+
+        <!-- 4. ESPECIFICAÇÕES -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Quartos:</label>
+            <input type="number" id="addPropBeds" required value="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Suítes:</label>
+            <input type="number" id="addPropSuites" required value="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Vagas Garagem:</label>
+            <input type="number" id="addPropGarage" value="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Área Privativa (M²):</label>
+            <input type="number" id="addPropArea" required value="140" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none">
+          </div>
+        </div>
+
+        <!-- 5. LINK EXTERNO / TOUR VIRTUAL -->
         <div>
-          <label class="text-[10px] text-slate-450 uppercase font-bold block mb-1">Título do Imóvel:</label>
-          <input type="text" id="addPropTitle" required placeholder="Ex: Apartamento Mirante Umarizal" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs focus:border-amber-500 outline-none text-white">
+          <label class="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1.5 mb-1">
+            <i data-lucide="globe" class="h-3.5 w-3.5 text-amber-400"></i> Link Externo / Tour Virtual 3D / Vídeo YouTube (Opcional):
+          </label>
+          <input type="url" id="addPropExternalLink" placeholder="https://matterport.com/show/?m=... ou https://youtube.com/..." class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3.5 py-2 text-xs text-sky-400 outline-none">
         </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-[10px] text-slate-450 uppercase font-bold block mb-1">Preço Venda (R$):</label>
-            <input type="number" id="addPropPrice" required value="1200000" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs focus:border-amber-500 outline-none text-whiteTitle">
-          </div>
-          <div>
-            <label class="text-[10px] text-slate-450 uppercase font-bold block mb-1">Bairro:</label>
-            <input type="text" id="addPropNeighborhood" required value="Umarizal" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs focus:border-amber-500 outline-none text-white">
-          </div>
-        </div>
-        <div class="grid grid-cols-3 gap-2">
-          <div>
-            <label class="text-[10px] text-slate-450 uppercase font-bold block mb-1">Quartos:</label>
-            <input type="number" id="addPropBeds" required value="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs focus:border-amber-500 outline-none text-white">
-          </div>
-          <div>
-            <label class="text-[10px] text-slate-450 uppercase font-bold block mb-1">Suítes:</label>
-            <input type="number" id="addPropSuites" required value="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs focus:border-amber-500 outline-none text-white">
-          </div>
-          <div>
-            <label class="text-[10px] text-slate-450 uppercase font-bold block mb-1">Área M²:</label>
-            <input type="number" id="addPropArea" required value="140" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs focus:border-amber-500 outline-none text-white">
-          </div>
-        </div>
+
+        <!-- 6. DIFERENCIAIS E DESCRIÇÃO -->
         <div>
-          <label class="text-[10px] text-slate-450 uppercase font-bold block mb-1">Foto Principal do Imóvel:</label>
-          <input type="hidden" id="addPropImage" required value="">
+          <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Diferenciais e Tags (separadas por vírgula):</label>
+          <input type="text" id="addPropFeatures" placeholder="Sacada Gourmet, Piscina, Vista Baía, Heliponto, Porteira Fechada" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3.5 py-2 text-xs text-white outline-none">
+        </div>
+
+        <div>
+          <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Descrição Comercial Detalhada:</label>
+          <textarea id="addPropDesc" rows="2" placeholder="Descreva os pontos fortes e arquitetura do imóvel..." class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl p-3 text-xs text-white outline-none resize-none"></textarea>
+        </div>
+
+        <!-- 7. ATÉ 5 FOTOS (UPLOAD REAL & GALERIA) -->
+        <div class="border-t border-slate-800 pt-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-[10px] text-amber-400 uppercase font-black flex items-center gap-1.5">
+              <i data-lucide="images" class="h-4 w-4"></i> Galeria de Fotos do Imóvel (Até 5 Fotos):
+            </label>
+            <span class="text-[9px] text-slate-400 font-mono">Envie arquivos reais • Selecione a capa</span>
+          </div>
           <div id="addPropUploaderContainer"></div>
         </div>
-        <div class="pt-2">
-          <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 text-black font-black text-xs uppercase rounded-xl transition cursor-pointer shadow-lg">
-            Adicionar Imóvel ✓
+
+        <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-3">
+          <button type="button" onclick="closeModal('addPropModal')" class="px-4 py-2.5 bg-slate-950 hover:bg-slate-850 border border-slate-800 text-slate-300 font-bold text-xs uppercase rounded-xl transition cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 text-black font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/10 flex items-center justify-center gap-1.5">
+            <i data-lucide="check-circle" class="h-4 w-4"></i> Cadastrar Imóvel ✓
           </button>
         </div>
       </form>
@@ -400,30 +509,50 @@
         </div>
         <div>
           <h3 class="text-base font-black text-slate-100 uppercase tracking-tight">Editar Imóvel do Catálogo</h3>
-          <p class="text-[9.5px] text-slate-400 uppercase font-mono">Modifique título, valores, especificações e mídias</p>
+          <p class="text-[9.5px] text-slate-400 uppercase font-mono">Modifique valores, modalidade (Venda/Aluguel), fotos e link externo</p>
         </div>
       </div>
 
       <form class="space-y-4" id="editPropForm" onsubmit="handleEditPropertySubmit(event)">
         <input type="hidden" id="editPropId">
         
-        <div>
-          <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Título do Imóvel Comercial:</label>
-          <input type="text" id="editPropTitle" required class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3.5 py-2 text-xs text-white outline-none">
+        <!-- 1. TÍTULO E SESSÃO / MODALIDADE -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Título do Imóvel:</label>
+            <input type="text" id="editPropTitle" required class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3.5 py-2 text-xs text-white outline-none">
+          </div>
+          <div>
+            <label class="text-[10px] text-amber-400 uppercase font-bold block mb-1">Sessão / Negociação:</label>
+            <select id="editPropModality" class="w-full bg-slate-950 border border-amber-500/40 focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-amber-300 font-bold outline-none cursor-pointer">
+              <option value="venda">🏷️ VENDA</option>
+              <option value="aluguel">🔑 ALUGUEL</option>
+              <option value="ambos">🏷️🔑 VENDA & ALUGUEL</option>
+            </select>
+          </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <!-- 2. VALORES (VENDA, ALUGUEL, CONDOMÍNIO, IPTU, STATUS) -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-950/60 p-3 rounded-2xl border border-slate-850">
           <div>
-            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Preço de Venda (R$):</label>
-            <input type="number" id="editPropPrice" required class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-amber-400 font-mono font-bold outline-none">
+            <label class="text-[9.5px] text-slate-400 uppercase font-bold block mb-1">Preço Venda (R$):</label>
+            <input type="number" id="editPropPrice" class="w-full bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-amber-400 font-mono font-bold outline-none">
           </div>
           <div>
-            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Condomínio Mensal (R$):</label>
-            <input type="number" id="editPropCondoPrice" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono outline-none">
+            <label class="text-[9.5px] text-slate-400 uppercase font-bold block mb-1">Aluguel (R$/mês):</label>
+            <input type="number" id="editPropRentalPrice" placeholder="0" class="w-full bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono font-bold outline-none">
           </div>
           <div>
-            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Status no Portfólio:</label>
-            <select id="editPropStatus" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none cursor-pointer">
+            <label class="text-[9.5px] text-slate-400 uppercase font-bold block mb-1">Condomínio (R$):</label>
+            <input type="number" id="editPropCondoPrice" class="w-full bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono outline-none">
+          </div>
+          <div>
+            <label class="text-[9.5px] text-slate-400 uppercase font-bold block mb-1">IPTU Mensal (R$):</label>
+            <input type="number" id="editPropIptuPrice" class="w-full bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono outline-none">
+          </div>
+          <div class="col-span-2 sm:col-span-1">
+            <label class="text-[9.5px] text-slate-400 uppercase font-bold block mb-1">Status:</label>
+            <select id="editPropStatus" class="w-full bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-xl px-2 py-2 text-xs text-slate-200 outline-none cursor-pointer">
               <option value="Disponível">🟢 Disponível</option>
               <option value="Reservado">🟡 Reservado</option>
               <option value="Vendido">🔴 Vendido</option>
@@ -431,29 +560,35 @@
           </div>
         </div>
 
+        <!-- 3. BAIRRO, CIDADE, TIPOLOGIA -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Bairro:</label>
+            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Bairro / Localidade:</label>
             <input type="text" id="editPropNeighborhood" required class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-white outline-none">
           </div>
           <div>
-            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Cidade:</label>
+            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Cidade / UF:</label>
             <input type="text" id="editPropCity" required class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-white outline-none">
           </div>
           <div>
             <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Tipologia do Imóvel:</label>
             <select id="editPropType" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none cursor-pointer">
-              <option value="Apartamento">Apartamento Alto Padrão</option>
-              <option value="Cobertura">Cobertura Duplex/Triplex</option>
-              <option value="Mansão">Mansão Suspensa</option>
-              <option value="Casa em Condomínio">Casa em Condomínio</option>
-              <option value="Studio Design">Studio Design / Smart</option>
-              <option value="Terreno Comercial">Terreno / Lote</option>
+              <option value="Apartamento">Apartamento Padrão / Alto Padrão</option>
+              <option value="Cobertura">Cobertura Duplex / Triplex</option>
+              <option value="Casa">Casa / Condomínio Fechado</option>
+              <option value="Fazenda">Fazenda / Haras / Agronegócio</option>
+              <option value="Mansão">Mansão / Villa Exclusiva</option>
+              <option value="Chácara/Sítio">Chácara / Sítio de Lazer</option>
+              <option value="Terreno">Terreno / Loteamento</option>
+              <option value="Comercial">Comercial / Sala / Corporativo</option>
+              <option value="Flat/Studio">Flat / Studio / Loft</option>
+              <option value="Galpão">Galpão Logístico / Industrial</option>
             </select>
           </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-3">
+        <!-- 4. ESPECIFICAÇÕES -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div>
             <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Quartos:</label>
             <input type="number" id="editPropBeds" required class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-white outline-none">
@@ -463,11 +598,24 @@
             <input type="number" id="editPropSuites" required class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-white outline-none">
           </div>
           <div>
+            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Vagas Garagem:</label>
+            <input type="number" id="editPropGarage" value="2" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-white outline-none">
+          </div>
+          <div>
             <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Área Privativa (M²):</label>
             <input type="number" id="editPropArea" required class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-white outline-none">
           </div>
         </div>
 
+        <!-- 5. LINK EXTERNO / TOUR VIRTUAL -->
+        <div>
+          <label class="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1.5 mb-1">
+            <i data-lucide="globe" class="h-3.5 w-3.5 text-amber-400"></i> Link Externo / Tour Virtual 3D / Vídeo YouTube (Opcional):
+          </label>
+          <input type="url" id="editPropExternalLink" placeholder="https://matterport.com/show/?m=... ou https://youtube.com/..." class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3.5 py-2 text-xs text-sky-400 outline-none">
+        </div>
+
+        <!-- 6. DIFERENCIAIS E DESCRIÇÃO -->
         <div>
           <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Diferenciais e Tags (separadas por vírgula):</label>
           <input type="text" id="editPropFeatures" placeholder="Sacada Gourmet, Piscina Privativa, 3 Vagas, Nascente" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3.5 py-2 text-xs text-white outline-none">
@@ -478,23 +626,15 @@
           <textarea id="editPropDesc" rows="3" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl p-3 text-xs text-white outline-none resize-none"></textarea>
         </div>
 
-        <!-- MÓDULO DE FOTO COM UPLOAD REAL E PREVIEW -->
-        <div class="border-t border-slate-800 pt-3 space-y-3">
+        <!-- 7. GALERIA COM ATÉ 5 FOTOS -->
+        <div class="border-t border-slate-800 pt-3 space-y-2">
           <div class="flex items-center justify-between">
-            <label class="text-[10px] text-slate-400 uppercase font-bold block">Foto Principal do Imóvel (Upload Real & WebP):</label>
-            <span class="text-[9px] text-amber-500 font-mono">Sem links externos</span>
+            <label class="text-[10px] text-amber-400 uppercase font-black flex items-center gap-1.5">
+              <i data-lucide="images" class="h-4 w-4"></i> Galeria de Fotos do Imóvel (Até 5 Fotos):
+            </label>
+            <span class="text-[9px] text-slate-400 font-mono">Envie arquivos reais • Marque a Capa com 👑</span>
           </div>
-          
-          <div class="flex flex-col sm:flex-row items-center gap-4">
-            <div class="relative w-full sm:w-44 h-28 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shrink-0">
-              <img id="editPropImgPreview" src="" class="w-full h-full object-cover">
-              <span class="absolute bottom-1 right-1 bg-slate-950/80 text-[8px] font-mono text-slate-400 px-1 py-0.5 rounded">Preview Atual</span>
-            </div>
-            <div class="flex-1 w-full">
-              <input type="hidden" id="editPropImage">
-              <div id="editPropUploaderContainer"></div>
-            </div>
-          </div>
+          <div id="editPropUploaderContainer"></div>
         </div>
 
         <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-3">
@@ -502,7 +642,7 @@
             Cancelar
           </button>
           <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 text-black font-extrabold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/10 flex items-center justify-center gap-1.5">
-            <i data-lucide="check" class="h-4 w-4"></i> Salvar Alterações do Imóvel
+            <i data-lucide="check" class="h-4 w-4"></i> Gravar Alterações do Imóvel
           </button>
         </div>
       </form>
@@ -859,70 +999,172 @@
         }
       ],
 
+      propertyFilterModality: 'all', // 'all', 'venda', 'aluguel'
+      propertyFilterType: 'all',
+      propertySearchTerm: '',
+
       properties: [
         {
           id: "prop-1",
           title: "Cobertura Duplex Duos Nazaré",
+          modality: "venda",
           price: 2400000,
+          rentalPrice: 0,
           condoPrice: 1500,
+          iptuPrice: 380,
           neighborhood: "Nazaré",
           city: "Belém",
           type: "Cobertura",
           status: "Disponível",
           bedrooms: 4,
           suites: 4,
+          garage: 4,
           area: 320,
-          description: "Cobertura duplex de altíssimo luxo com piscina privativa, terraço gourmet e vista panorâmica para a Baía do Guajará. Acabamento primoroso.",
+          externalLink: "https://my.matterport.com/show/?m=example-duos-nazare",
+          description: "Cobertura duplex de altíssimo luxo com piscina privativa aquecida, terraço gourmet e vista panorâmica para a Baía do Guajará. Acabamento primoroso.",
           imageUrl: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80",
-          features: ["Piscina Privativa", "Churrasqueira", "4 Vagas", "Automação"]
+          images: [
+            "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80"
+          ],
+          features: ["Piscina Privativa", "Churrasqueira", "4 Vagas", "Automação", "Vista Baía"]
         },
         {
           id: "prop-2",
-          title: "Apartamento Premium Batista Campos",
-          price: 1250000,
+          title: "Apartamento Garden Batista Campos",
+          modality: "aluguel",
+          price: 0,
+          rentalPrice: 8500,
           condoPrice: 850,
+          iptuPrice: 220,
           neighborhood: "Batista Campos",
           city: "Belém",
           type: "Apartamento",
           status: "Disponível",
           bedrooms: 3,
           suites: 3,
+          garage: 2,
           area: 142,
-          description: "Excelente apartamento em frente à Praça Batista Campos. Sacada gourmet integrada à cozinha e andar alto.",
+          externalLink: "https://youtube.com/watch?v=tour-apartamento-garden",
+          description: "Excelente apartamento em frente à Praça Batista Campos. Sacada gourmet integrada à cozinha, andar alto e totalmente mobiliado para locação executiva.",
           imageUrl: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80",
-          features: ["Sacada Gourmet", "3 Vagas", "Frente Praça"]
+          images: [
+            "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80"
+          ],
+          features: ["Mobiliado", "Sacada Gourmet", "2 Vagas", "Frente Praça"]
         },
         {
           id: "prop-3",
           title: "Mansão Suspensa Umarizal Luxury",
+          modality: "venda",
           price: 3450000,
+          rentalPrice: 0,
           condoPrice: 2200,
+          iptuPrice: 590,
           neighborhood: "Umarizal",
           city: "Belém",
           type: "Mansão",
           status: "Reservado",
           bedrooms: 4,
           suites: 4,
+          garage: 4,
           area: 410,
-          description: "Um apartamento por andar, pé direito duplo na sala de estar, automação de iluminação e ar condicionado em torre de alto padrão.",
+          externalLink: "https://my.matterport.com/show/?m=umarizal-luxury",
+          description: "Um apartamento por andar, pé direito duplo na sala de estar, automação de iluminação e ar condicionado em torre de altíssimo padrão com heliponto.",
           imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
-          features: ["1 por Andar", "Pé Direito Duplo", "Elevador Privativo"]
+          images: [
+            "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=800&q=80"
+          ],
+          features: ["1 por Andar", "Pé Direito Duplo", "Elevador Privativo", "Heliponto"]
         },
         {
           id: "prop-4",
-          title: "Studio Design Reduto Smart",
-          price: 480000,
+          title: "Casa em Condomínio Bosque dos Lagos",
+          modality: "ambos",
+          price: 2900000,
+          rentalPrice: 16000,
+          condoPrice: 1200,
+          iptuPrice: 420,
+          neighborhood: "Águas Lindas",
+          city: "Ananindeua",
+          type: "Casa",
+          status: "Disponível",
+          bedrooms: 4,
+          suites: 4,
+          garage: 4,
+          area: 380,
+          externalLink: "https://youtube.com/watch?v=casa-bosque-dos-lagos",
+          description: "Casa contemporânea em condomínio fechado de altíssimo padrão. Lazer privativo com piscina com borda infinita, sauna integrada e espaço gourmet climatizado.",
+          imageUrl: "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80",
+          images: [
+            "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=800&q=80"
+          ],
+          features: ["Condomínio Fechado", "Piscina Integrada", "Sauna", "Energia Solar"]
+        },
+        {
+          id: "prop-5",
+          title: "Fazenda Santa Maria do Agronegócio",
+          modality: "venda",
+          price: 14500000,
+          rentalPrice: 0,
+          condoPrice: 0,
+          iptuPrice: 1200,
+          neighborhood: "Zona Rural",
+          city: "Castanhal",
+          type: "Fazenda",
+          status: "Disponível",
+          bedrooms: 6,
+          suites: 4,
+          garage: 10,
+          area: 450000,
+          externalLink: "https://drive.google.com/drive/folders/fazenda-santa-maria",
+          description: "Fazenda espetacular com 45 hectares. Sede colonial de luxo, haras completo, represa com lago para jet ski, pista de pouso homologada e pastagens formadas.",
+          imageUrl: "https://images.unsplash.com/photo-1500076656116-558758c991c1?auto=format&fit=crop&w=800&q=80",
+          images: [
+            "https://images.unsplash.com/photo-1500076656116-558758c991c1?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1516253593875-bd7ba052fbc5?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=800&q=80"
+          ],
+          features: ["Haras Completo", "Pista de Pouso", "Lago Privativo", "Sede Colonial", "Gado PO"]
+        },
+        {
+          id: "prop-6",
+          title: "Studio Design Reduto Smart Loft",
+          modality: "aluguel",
+          price: 0,
+          rentalPrice: 3200,
           condoPrice: 420,
+          iptuPrice: 110,
           neighborhood: "Reduto",
           city: "Belém",
-          type: "Studio Design",
+          type: "Flat/Studio",
           status: "Disponível",
           bedrooms: 1,
           suites: 1,
+          garage: 1,
           area: 48,
-          description: "Conceito aberto moderno, fechadura biométrica digital e rooftop com piscina de borda infinita.",
+          externalLink: "https://airbnb.com/h/studio-reduto-smart",
+          description: "Conceito aberto moderno estilo industrial com acabamento em concreto aparente, fechadura biométrica digital, rooftop com piscina de borda infinita e coworking.",
           imageUrl: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80",
-          features: ["Fechadura Digital", "Rooftop Pool", "Coworking"]
+          images: [
+            "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80"
+          ],
+          features: ["Fechadura Digital", "Rooftop Pool", "Coworking", "Mini Market"]
         }
       ],
 
@@ -1002,15 +1244,105 @@
       ]
     };
 
-    // Load from LocalStorage if exists
-    if (localStorage.getItem('smartbroker_crm_local_state_v3')) {
+    // ==========================================
+    // PERSISTENCE ENGINE (SAFE STORAGE PRO)
+    // ==========================================
+    const SafeStorage = {
+      KEY: 'smartbroker_crm_local_state_v4',
+      LEGACY_KEYS: ['smartbroker_crm_local_state_v3', 'smartbroker_crm_local_state_v2'],
+
+      save: function(data) {
+        try {
+          const payload = this.cleanForStorage(data, false);
+          const serialized = JSON.stringify(payload);
+          localStorage.setItem(this.KEY, serialized);
+          try { sessionStorage.setItem(this.KEY, serialized); } catch (_) {}
+          this.setIndicator(true);
+          return true;
+        } catch (e) {
+          console.warn("Storage warning - attempting fallback compression:", e);
+          try {
+            // Quota recovery: prune large history logs and compact base64
+            const minimal = this.cleanForStorage(data, true);
+            const serialized = JSON.stringify(minimal);
+            localStorage.setItem(this.KEY, serialized);
+            this.setIndicator(true);
+            return true;
+          } catch (e2) {
+            console.error("Critical storage quota - saving to session memory:", e2);
+            try {
+              sessionStorage.setItem(this.KEY, JSON.stringify(this.cleanForStorage(data, true)));
+              this.setIndicator(true, "Memória da Sessão");
+              return true;
+            } catch (_) {
+              this.setIndicator(false);
+              return false;
+            }
+          }
+        }
+      },
+
+      load: function() {
+        let raw = null;
+        try {
+          raw = localStorage.getItem(this.KEY);
+          if (!raw) {
+            for (const lk of this.LEGACY_KEYS) {
+              const legacyRaw = localStorage.getItem(lk);
+              if (legacyRaw) { raw = legacyRaw; break; }
+            }
+          }
+          if (!raw) {
+            raw = sessionStorage.getItem(this.KEY);
+          }
+        } catch (err) {
+          console.error("Error reading storage:", err);
+        }
+        if (!raw) return null;
+        try {
+          return JSON.parse(raw);
+        } catch (err) {
+          console.error("Error parsing stored state JSON:", err);
+          return null;
+        }
+      },
+
+      cleanForStorage: function(data, aggressive = false) {
+        const copy = { ...data };
+        if (copy.uploads && copy.uploads.length > (aggressive ? 4 : 12)) {
+          copy.uploads = copy.uploads.slice(0, aggressive ? 4 : 12);
+        }
+        if (copy.activeMasterLogs && copy.activeMasterLogs.length > (aggressive ? 8 : 25)) {
+          copy.activeMasterLogs = copy.activeMasterLogs.slice(0, aggressive ? 8 : 25);
+        }
+        return copy;
+      },
+
+      setIndicator: function(saved, customLabel = null) {
+        const el = document.getElementById('globalSaveStatusBadge');
+        if (el) {
+          if (saved) {
+            el.className = "flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full transition-all";
+            el.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span class="text-emerald-400 font-mono text-[9px] font-bold">${customLabel || 'Modificações Gravadas ✓'}</span>`;
+          } else {
+            el.className = "flex items-center gap-1.5 px-2.5 py-1 bg-rose-500/10 border border-rose-500/20 rounded-full transition-all";
+            el.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-rose-400"></span><span class="text-rose-400 font-mono text-[9px] font-bold">Erro de Espaço</span>`;
+          }
+        }
+      }
+    };
+
+    // Load from SafeStorage if exists
+    const loadedState = SafeStorage.load();
+    if (loadedState) {
       try {
-        const loadedState = JSON.parse(localStorage.getItem('smartbroker_crm_local_state_v3'));
-        // Deep-merge core entities to keep new dynamic keys safe on legacy cache load
         state = { ...state, ...loadedState };
         if (loadedState.broker) state.broker = { ...state.broker, ...loadedState.broker };
         if (loadedState.agency) state.agency = { ...state.agency, ...loadedState.agency };
         if (loadedState.masterSettings) state.masterSettings = { ...state.masterSettings, ...loadedState.masterSettings };
+        if (loadedState.properties && loadedState.properties.length) {
+          state.properties = loadedState.properties;
+        }
         if (!state.uploads) state.uploads = [];
       } catch (e) { console.error("Could not parse storage state", e); }
     }
@@ -1035,11 +1367,37 @@
         if (!p.status) p.status = "Disponível";
         if (!p.type) p.type = "Apartamento";
         if (!p.city) p.city = "Belém";
+        if (!p.modality) {
+          p.modality = (p.rentalPrice && p.rentalPrice > 0 && (!p.price || p.price === 0)) ? 'aluguel' : (p.price && p.rentalPrice ? 'ambos' : 'venda');
+        }
+        if (!p.rentalPrice) p.rentalPrice = 0;
+        if (!p.iptuPrice) p.iptuPrice = 0;
+        if (!p.garage) p.garage = 2;
+        if (!p.externalLink) p.externalLink = '';
+        if (!p.images || !p.images.length) {
+          p.images = p.imageUrl ? [p.imageUrl] : [];
+        }
+        if (!p.imageUrl && p.images && p.images.length) {
+          p.imageUrl = p.images[0];
+        }
       });
     }
 
     function syncStateToStorage() {
-      localStorage.setItem('smartbroker_crm_local_state_v3', JSON.stringify(state));
+      return SafeStorage.save(state);
+    }
+
+    function manualSaveTrigger() {
+      // Collect current tab forms if open
+      if (state.activeTab === 'profile') {
+        const nameEl = document.getElementById('brokerProfileName');
+        if (nameEl) saveBrokerProfile();
+      } else if (state.activeTab === 'agency') {
+        const agEl = document.getElementById('agencyCompanyName');
+        if (agEl) saveAgencyConfigData();
+      }
+      syncStateToStorage();
+      triggerToast("✓ Todas as modificações foram gravadas com sucesso no seu navegador!", "success");
     }
 
     // Role Map
@@ -1644,41 +2002,131 @@
     }
 
     // ==========================================
-    // TAB: PROPERTIES PORTFOLIO
+    // TAB: PROPERTIES PORTFOLIO (VENDA & ALUGUEL)
     // ==========================================
-    function openAddPropertyModal() {
-      openModal('addPropModal');
-      // Render our gorgeous uploader inside the modal container with automatic form links
-      renderRVUploader('addPropUploaderContainer', {
-        multi: false,
-        crop: 'landscape',
-        onUpload: (fileObj) => {
-          document.getElementById('addPropImage').value = fileObj.base64 || fileObj.url;
+    let tempAddPropImages = [];
+    let tempEditPropImages = [];
+
+    function setFilterModality(mod) {
+      state.propertyFilterModality = mod;
+      renderPortfolioList();
+      // Highlight active button
+      ['all', 'venda', 'aluguel'].forEach(m => {
+        const btn = document.getElementById(`filter-mod-${m}`);
+        if (btn) {
+          if (m === mod) {
+            btn.className = "px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition bg-amber-500 text-black shadow cursor-pointer";
+          } else {
+            btn.className = "px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer";
+          }
         }
       });
     }
 
+    function setFilterType(typ) {
+      state.propertyFilterType = typ;
+      renderPortfolioList();
+    }
+
+    function setPropertySearch(val) {
+      state.propertySearchTerm = val.toLowerCase().trim();
+      renderPortfolioList();
+    }
+
+    function openAddPropertyModal() {
+      tempAddPropImages = [];
+      const form = document.getElementById('addPropForm');
+      if (form) form.reset();
+      openModal('addPropModal');
+
+      // Initialize uploader with multi: true, up to 5 photos
+      renderRVUploader('addPropUploaderContainer', {
+        multi: true,
+        maxCount: 5,
+        imageList: [],
+        onUpload: (list) => {
+          tempAddPropImages = list || [];
+        }
+      });
+      lucide.createIcons();
+    }
+
     function renderPropertiesTab(container) {
+      const totalAll = state.properties.length;
+      const totalVenda = state.properties.filter(p => p.modality === 'venda' || p.modality === 'ambos').length;
+      const totalAluguel = state.properties.filter(p => p.modality === 'aluguel' || p.modality === 'ambos').length;
+
       container.innerHTML = `
         <div class="space-y-6">
+          <!-- Top Header -->
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div class="text-left">
-              <h2 class="text-lg font-black text-indigo-100 uppercase tracking-tight">Inventário de Alto Luxo</h2>
-              <p class="text-xs text-slate-400">Lista ativa comercializada na Doca e Umarizal.</p>
+              <div class="flex items-center gap-2">
+                <h2 class="text-lg font-black text-indigo-100 uppercase tracking-tight">Inventário de Alto Padrão</h2>
+                <span class="px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-mono font-bold rounded-full">${totalAll} Cadastrados</span>
+              </div>
+              <p class="text-xs text-slate-400">Gestão integrada de imóveis para Venda e Aluguel corporativo / residencial.</p>
             </div>
-            <button onclick="openAddPropertyModal()" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 text-black font-extrabold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow">
-              <i data-lucide="plus" class="h-4 w-4"></i> Adicionar Imóvel
+            
+            <button onclick="openAddPropertyModal()" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 text-black font-extrabold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-lg shadow-amber-500/10">
+              <i data-lucide="plus-circle" class="h-4 w-4"></i> Adicionar Imóvel
             </button>
           </div>
 
+          <!-- Section Controls: Modality Filters (Venda / Aluguel) + Type Filter + Search -->
+          <div class="bg-slate-900 border border-slate-850 p-4 rounded-2xl flex flex-col lg:flex-row items-center justify-between gap-4 shadow-xl">
+            <!-- Modality Filter Buttons (Todos / Venda / Aluguel) -->
+            <div class="flex items-center gap-2 w-full lg:w-auto">
+              <button id="filter-mod-all" onclick="setFilterModality('all')"
+                class="px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition ${state.propertyFilterModality === 'all' ? 'bg-amber-500 text-black shadow' : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'} cursor-pointer">
+                Todos (${totalAll})
+              </button>
+              <button id="filter-mod-venda" onclick="setFilterModality('venda')"
+                class="px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition ${state.propertyFilterModality === 'venda' ? 'bg-amber-500 text-black shadow' : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'} cursor-pointer flex items-center gap-1">
+                🏷️ Venda (${totalVenda})
+              </button>
+              <button id="filter-mod-aluguel" onclick="setFilterModality('aluguel')"
+                class="px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition ${state.propertyFilterModality === 'aluguel' ? 'bg-amber-500 text-black shadow' : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'} cursor-pointer flex items-center gap-1">
+                🔑 Aluguel (${totalAluguel})
+              </button>
+            </div>
+
+            <!-- Type Filter & Search Input -->
+            <div class="flex items-center gap-3 w-full lg:w-auto flex-wrap">
+              <!-- Type Dropdown -->
+              <select onchange="setFilterType(this.value)" 
+                class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-bold py-2 px-3 rounded-xl outline-none cursor-pointer focus:border-amber-500/50">
+                <option value="all" ${state.propertyFilterType === 'all' ? 'selected' : ''}>Todos os Tipos</option>
+                <option value="Cobertura" ${state.propertyFilterType === 'Cobertura' ? 'selected' : ''}>Cobertura</option>
+                <option value="Apartamento" ${state.propertyFilterType === 'Apartamento' ? 'selected' : ''}>Apartamento</option>
+                <option value="Casa" ${state.propertyFilterType === 'Casa' ? 'selected' : ''}>Casa</option>
+                <option value="Fazenda" ${state.propertyFilterType === 'Fazenda' ? 'selected' : ''}>Fazenda</option>
+                <option value="Mansão" ${state.propertyFilterType === 'Mansão' ? 'selected' : ''}>Mansão</option>
+                <option value="Chácara/Sítio" ${state.propertyFilterType === 'Chácara/Sítio' ? 'selected' : ''}>Chácara / Sítio</option>
+                <option value="Terreno" ${state.propertyFilterType === 'Terreno' ? 'selected' : ''}>Terreno</option>
+                <option value="Comercial" ${state.propertyFilterType === 'Comercial' ? 'selected' : ''}>Comercial</option>
+                <option value="Flat/Studio" ${state.propertyFilterType === 'Flat/Studio' ? 'selected' : ''}>Flat / Studio</option>
+                <option value="Galpão" ${state.propertyFilterType === 'Galpão' ? 'selected' : ''}>Galpão</option>
+              </select>
+
+              <!-- Search Box -->
+              <div class="relative flex-1 sm:w-56">
+                <i data-lucide="search" class="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-500 pointer-events-none"></i>
+                <input type="text" oninput="setPropertySearch(this.value)" value="${state.propertySearchTerm || ''}" placeholder="Buscar bairro, título..." 
+                  class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-500/50">
+              </div>
+            </div>
+          </div>
+
           <!-- Product Card Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5" id="propertiesCatalogueLayout">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6" id="propertiesCatalogueLayout">
             <!-- Rendered by Loop -->
           </div>
         </div>
       `;
 
       renderPortfolioList();
+      lucide.createIcons();
     }
 
     function renderPortfolioList() {
@@ -1686,11 +2134,65 @@
       if (!container) return;
       container.innerHTML = '';
 
-      state.properties.forEach(prop => {
+      // Filter properties
+      const filtered = state.properties.filter(prop => {
+        // Modality filter
+        if (state.propertyFilterModality === 'venda') {
+          if (prop.modality !== 'venda' && prop.modality !== 'ambos') return false;
+        } else if (state.propertyFilterModality === 'aluguel') {
+          if (prop.modality !== 'aluguel' && prop.modality !== 'ambos') return false;
+        }
+
+        // Type filter
+        if (state.propertyFilterType && state.propertyFilterType !== 'all') {
+          if (prop.type !== state.propertyFilterType) return false;
+        }
+
+        // Search text
+        if (state.propertySearchTerm) {
+          const t = state.propertySearchTerm;
+          const matchTitle = (prop.title || '').toLowerCase().includes(t);
+          const matchNeigh = (prop.neighborhood || '').toLowerCase().includes(t);
+          const matchCity = (prop.city || '').toLowerCase().includes(t);
+          const matchType = (prop.type || '').toLowerCase().includes(t);
+          if (!matchTitle && !matchNeigh && !matchCity && !matchType) return false;
+        }
+
+        return true;
+      });
+
+      if (!filtered.length) {
+        container.innerHTML = `
+          <div class="col-span-full py-16 text-center space-y-3 bg-slate-900 border border-slate-850 rounded-3xl">
+            <div class="p-3 bg-amber-500/10 text-amber-500 inline-block rounded-2xl">
+              <i data-lucide="building" class="h-8 w-8 mx-auto"></i>
+            </div>
+            <h4 class="text-sm font-black text-slate-200 uppercase">Nenhum imóvel encontrado nessa categoria</h4>
+            <p class="text-xs text-slate-400 max-w-md mx-auto">Altere os filtros de busca ou adicione um novo imóvel para esta sessão comercial.</p>
+            <button onclick="setFilterModality('all'); setFilterType('all');" class="px-4 py-2 bg-slate-950 hover:bg-slate-850 text-amber-400 border border-slate-800 text-xs font-bold rounded-xl transition cursor-pointer">
+              Limpar Filtros
+            </button>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      filtered.forEach(prop => {
         let featuresHtml = '';
-        (prop.features || []).forEach(feat => {
+        (prop.features || []).slice(0, 4).forEach(feat => {
           featuresHtml += `<span class="bg-slate-950 font-mono text-[8.5px] text-slate-400 p-1 px-1.5 rounded border border-slate-900">${feat}</span>`;
         });
+
+        // Modality Badge
+        let modalityBadge = '';
+        if (prop.modality === 'aluguel') {
+          modalityBadge = '<span class="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] font-black uppercase px-2 py-0.5 rounded-md font-mono flex items-center gap-1">🔑 ALUGUEL</span>';
+        } else if (prop.modality === 'ambos') {
+          modalityBadge = '<span class="bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-[9px] font-black uppercase px-2 py-0.5 rounded-md font-mono flex items-center gap-1">🏷️🔑 VENDA & ALUGUEL</span>';
+        } else {
+          modalityBadge = '<span class="bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[9px] font-black uppercase px-2 py-0.5 rounded-md font-mono flex items-center gap-1">🏷️ VENDA</span>';
+        }
 
         const statusBadge = prop.status === 'Vendido' 
           ? '<span class="bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[8px] font-mono font-bold px-1.5 py-0.5 rounded">VENDIDO</span>'
@@ -1698,53 +2200,125 @@
           ? '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[8px] font-mono font-bold px-1.5 py-0.5 rounded">RESERVADO</span>'
           : '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[8px] font-mono font-bold px-1.5 py-0.5 rounded">DISPONÍVEL</span>';
 
-        const typeBadge = prop.type || 'Imóvel de Luxo';
+        const typeBadge = prop.type || 'Apartamento';
+
+        // Price formatting based on modality
+        let priceHtml = '';
+        if (prop.modality === 'aluguel') {
+          priceHtml = `
+            <div>
+              <p class="text-[9px] text-slate-400 font-mono">Valor da Locação</p>
+              <p class="text-base font-black font-mono text-emerald-400">R$ ${(prop.rentalPrice || 0).toLocaleString('pt-BR')}<span class="text-[10px] text-slate-400 font-sans font-normal">/mês</span></p>
+            </div>
+          `;
+        } else if (prop.modality === 'ambos') {
+          priceHtml = `
+            <div>
+              <p class="text-[8.5px] text-slate-400 font-mono">Venda / Aluguel</p>
+              <p class="text-sm font-black font-mono text-white">R$ ${(prop.price || 0).toLocaleString('pt-BR')}</p>
+              <p class="text-[10px] font-bold font-mono text-emerald-400">Locação: R$ ${(prop.rentalPrice || 0).toLocaleString('pt-BR')}/mês</p>
+            </div>
+          `;
+        } else {
+          priceHtml = `
+            <div>
+              <p class="text-[9px] text-slate-400 font-mono">Valor de Venda</p>
+              <p class="text-base font-black font-mono text-amber-400">R$ ${(prop.price || 0).toLocaleString('pt-BR')}</p>
+            </div>
+          `;
+        }
+
+        // Photos gallery setup (up to 5 photos)
+        const photoList = (prop.images && prop.images.length) ? prop.images : (prop.imageUrl ? [prop.imageUrl] : []);
+        const totalPhotos = photoList.length;
+
+        // Mini thumbnails for gallery
+        let photoThumbnailsHtml = '';
+        if (totalPhotos > 1) {
+          photoThumbnailsHtml = `
+            <div class="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1">
+              ${photoList.slice(0, 5).map((img, i) => `
+                <img src="${img}" onclick="switchPropertyCardPreview('${prop.id}', '${img}')"
+                  class="h-7 w-10 object-cover rounded border ${img === prop.imageUrl ? 'border-amber-500 ring-1 ring-amber-500' : 'border-slate-800 opacity-60 hover:opacity-100'} cursor-pointer transition"
+                  title="Foto ${i + 1}">
+              `).join('')}
+            </div>
+          `;
+        }
 
         const card = `
-          <div class="bg-slate-900 border border-slate-850/80 rounded-2xl overflow-hidden shadow-xl hover:border-amber-500/35 group duration-200 text-left flex flex-col justify-between">
-            <div class="relative overflow-hidden h-48 shrink-0">
-              <img src="${prop.imageUrl}" class="w-full h-full object-cover group-hover:scale-105 duration-500" alt="${prop.title}">
-              <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
+          <div class="bg-slate-900 border border-slate-850/80 rounded-3xl overflow-hidden shadow-xl hover:border-amber-500/35 group duration-200 text-left flex flex-col justify-between">
+            <!-- Image Area -->
+            <div class="relative overflow-hidden h-52 shrink-0 bg-slate-950">
+              <img id="card-img-${prop.id}" src="${prop.imageUrl}" class="w-full h-full object-cover group-hover:scale-105 duration-500" alt="${prop.title}">
+              <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/25 to-transparent"></div>
               
-              <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                <span class="bg-slate-950/85 backdrop-blur text-amber-400 text-[9px] font-black uppercase px-2 py-0.5 rounded-md font-mono border border-amber-500/30">${prop.neighborhood}</span>
-                <span class="bg-slate-950/85 backdrop-blur text-slate-300 text-[8.5px] font-mono px-1.5 py-0.5 rounded-md border border-slate-800">${typeBadge}</span>
+              <!-- Badges top left -->
+              <div class="absolute top-2.5 left-2.5 flex flex-wrap items-center gap-1.5">
+                ${modalityBadge}
+                <span class="bg-slate-950/85 backdrop-blur text-slate-200 text-[8.5px] font-mono px-2 py-0.5 rounded-md border border-slate-800 font-bold">${typeBadge}</span>
               </div>
 
-              <div class="absolute top-2.5 right-2.5">
+              <!-- Status top right -->
+              <div class="absolute top-2.5 right-2.5 flex items-center gap-1">
+                <span class="bg-slate-950/85 backdrop-blur text-slate-300 text-[8px] font-mono px-1.5 py-0.5 rounded border border-slate-800">📸 ${totalPhotos}/5</span>
                 ${statusBadge}
               </div>
 
+              <!-- Price bottom -->
               <div class="absolute bottom-2.5 left-3 right-3 flex justify-between items-end">
-                <div>
-                  <p class="text-[9px] text-slate-400 font-mono">Valor Comercial</p>
-                  <p class="text-base font-black font-mono text-white">R$ ${prop.price.toLocaleString('pt-BR')}</p>
+                ${priceHtml}
+                <div class="text-right space-y-0.5">
+                  ${prop.condoPrice ? `<span class="text-[8.5px] font-mono text-slate-400 bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800 block">Cond: R$ ${prop.condoPrice}</span>` : ''}
+                  ${prop.iptuPrice ? `<span class="text-[8.5px] font-mono text-slate-400 bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800 block">IPTU: R$ ${prop.iptuPrice}</span>` : ''}
                 </div>
-                ${prop.condoPrice ? `<span class="text-[8.5px] font-mono text-slate-400 bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800">Cond: R$ ${prop.condoPrice}</span>` : ''}
               </div>
             </div>
 
+            <!-- Body Details -->
             <div class="p-4 space-y-3 flex-1 flex flex-col justify-between">
               <div class="space-y-1.5">
-                <h4 class="font-extrabold text-xs text-slate-100 uppercase leading-snug group-hover:text-amber-400 duration-200">${prop.title}</h4>
-                <p class="text-[10px] text-slate-400 leading-relaxed font-sans">${prop.bedrooms || 3} Quartos (${prop.suites || 2} Suítes) | ${prop.area || 120} M² Privativos | ${prop.city || 'Belém'}</p>
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                  <span>${prop.neighborhood} • ${prop.city || 'Belém'}</span>
+                  <span>${prop.area || 120} m²</span>
+                </div>
+                <h4 class="font-black text-sm text-slate-100 uppercase leading-snug group-hover:text-amber-400 duration-200">${prop.title}</h4>
+                <p class="text-[10.5px] text-slate-400 leading-relaxed font-sans">
+                  ${prop.bedrooms || 3} Quartos (${prop.suites || 2} Suítes) | ${prop.garage || 2} Vagas Garagem
+                </p>
                 ${prop.description ? `<p class="text-[9.5px] text-slate-450 line-clamp-2 leading-relaxed italic">${prop.description}</p>` : ''}
               </div>
 
+              <!-- Multi-photo previews thumbnails -->
+              ${photoThumbnailsHtml}
+
+              <!-- External Tour Link if exists -->
+              ${prop.externalLink ? `
+                <div class="pt-1">
+                  <a href="${prop.externalLink}" target="_blank" 
+                    class="py-1.5 px-3 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 hover:text-sky-300 border border-sky-500/25 rounded-xl text-[10px] font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer">
+                    <i data-lucide="globe" class="h-3.5 w-3.5"></i>
+                    <span>Ver Tour Virtual / Link Externo</span>
+                    <i data-lucide="external-link" class="h-3 w-3"></i>
+                  </a>
+                </div>
+              ` : ''}
+
+              <!-- Tags -->
               <div class="border-t border-slate-800/80 pt-2 flex flex-wrap gap-1">
                 ${featuresHtml}
               </div>
 
-              <!-- ACTION BUTTONS: EDIT & DELETE -->
+              <!-- Action Buttons: EDIT & DELETE -->
               <div class="border-t border-slate-800/80 pt-3 flex items-center justify-between gap-2">
                 <button onclick="openEditPropertyModal('${prop.id}')" 
-                  class="flex-1 py-1.5 px-3 bg-amber-500/10 hover:bg-amber-500 border border-amber-500/25 hover:border-amber-500 text-amber-400 hover:text-black font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition duration-150 cursor-pointer flex items-center justify-center gap-1.5 shadow">
+                  class="flex-1 py-2 px-3 bg-amber-500/10 hover:bg-amber-500 border border-amber-500/30 hover:border-amber-500 text-amber-400 hover:text-black font-extrabold text-[10.5px] uppercase tracking-wider rounded-xl transition duration-150 cursor-pointer flex items-center justify-center gap-1.5 shadow">
                   <i data-lucide="edit-3" class="h-3.5 w-3.5"></i>
                   <span>Editar Imóvel</span>
                 </button>
                 <button onclick="deleteProperty('${prop.id}')" 
                   title="Excluir imóvel do catálogo"
-                  class="p-1.5 px-2.5 bg-slate-950 hover:bg-rose-500/10 border border-slate-850 hover:border-rose-500/30 text-slate-400 hover:text-rose-400 rounded-xl transition cursor-pointer">
+                  class="p-2 px-3 bg-slate-950 hover:bg-rose-500/10 border border-slate-850 hover:border-rose-500/30 text-slate-400 hover:text-rose-400 rounded-xl transition cursor-pointer">
                   <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
                 </button>
               </div>
@@ -1756,6 +2330,13 @@
       lucide.createIcons();
     }
 
+    function switchPropertyCardPreview(propId, newImgUrl) {
+      const imgEl = document.getElementById(`card-img-${propId}`);
+      if (imgEl) {
+        imgEl.src = newImgUrl;
+      }
+    }
+
     function openEditPropertyModal(propId) {
       const prop = state.properties.find(p => p.id === propId);
       if (!prop) {
@@ -1764,36 +2345,42 @@
       }
 
       document.getElementById('editPropId').value = prop.id;
-      document.getElementById('editPropTitle').value = prop.title;
-      document.getElementById('editPropPrice').value = prop.price;
+      document.getElementById('editPropTitle').value = prop.title || "";
+      document.getElementById('editPropModality').value = prop.modality || (prop.rentalPrice > 0 && !prop.price ? 'aluguel' : 'venda');
+      document.getElementById('editPropPrice').value = prop.price || 0;
+      document.getElementById('editPropRentalPrice').value = prop.rentalPrice || 0;
       document.getElementById('editPropCondoPrice').value = prop.condoPrice || 0;
-      document.getElementById('editPropNeighborhood').value = prop.neighborhood;
+      document.getElementById('editPropIptuPrice').value = prop.iptuPrice || 0;
+      document.getElementById('editPropNeighborhood').value = prop.neighborhood || "";
       document.getElementById('editPropCity').value = prop.city || "Belém";
       document.getElementById('editPropType').value = prop.type || "Apartamento";
       document.getElementById('editPropStatus').value = prop.status || "Disponível";
       document.getElementById('editPropBeds').value = prop.bedrooms || 3;
       document.getElementById('editPropSuites').value = prop.suites || 2;
+      document.getElementById('editPropGarage').value = prop.garage || 2;
       document.getElementById('editPropArea').value = prop.area || 100;
+      document.getElementById('editPropExternalLink').value = prop.externalLink || "";
       document.getElementById('editPropFeatures').value = (prop.features || []).join(", ");
       document.getElementById('editPropDesc').value = prop.description || "";
-      document.getElementById('editPropImage').value = prop.imageUrl || "";
 
-      // Preview current image
-      const preview = document.getElementById('editPropImgPreview');
-      if (preview) preview.src = prop.imageUrl || "";
+      // Setup images list (up to 5 photos)
+      const existingImages = (prop.images && prop.images.length) ? prop.images : (prop.imageUrl ? [prop.imageUrl] : []);
+      tempEditPropImages = existingImages.map((imgUrl, i) => ({
+        url: imgUrl,
+        medium: imgUrl,
+        isCover: i === 0,
+        tag: 'fachada'
+      }));
 
       openModal('editPropModal');
 
-      // Initialize modern uploader for editing the property's photo
+      // Initialize modern uploader supporting up to 5 photos
       renderRVUploader('editPropUploaderContainer', {
-        multi: false,
-        crop: 'landscape',
-        imageList: prop.imageUrl ? [{ url: prop.imageUrl, dimensions: "1200x800" }] : [],
-        onUpload: (fileObj) => {
-          const newImg = fileObj.base64 || fileObj.url;
-          document.getElementById('editPropImage').value = newImg;
-          if (preview) preview.src = newImg;
-          triggerToast("Nova foto carregada para o imóvel!", "success");
+        multi: true,
+        maxCount: 5,
+        imageList: tempEditPropImages,
+        onUpload: (list) => {
+          tempEditPropImages = list || [];
         }
       });
 
@@ -1806,41 +2393,57 @@
       const idx = state.properties.findIndex(p => p.id === id);
       if (idx === -1) return;
 
-      const title = document.getElementById('editPropTitle').value;
-      const price = parseFloat(document.getElementById('editPropPrice').value);
+      const title = document.getElementById('editPropTitle').value.trim();
+      const modality = document.getElementById('editPropModality').value;
+      const price = parseFloat(document.getElementById('editPropPrice').value) || 0;
+      const rentalPrice = parseFloat(document.getElementById('editPropRentalPrice').value) || 0;
       const condoPrice = parseFloat(document.getElementById('editPropCondoPrice').value) || 0;
-      const neighborhood = document.getElementById('editPropNeighborhood').value;
-      const city = document.getElementById('editPropCity').value || "Belém";
+      const iptuPrice = parseFloat(document.getElementById('editPropIptuPrice').value) || 0;
+      const neighborhood = document.getElementById('editPropNeighborhood').value.trim();
+      const city = document.getElementById('editPropCity').value.trim() || "Belém";
       const type = document.getElementById('editPropType').value;
       const status = document.getElementById('editPropStatus').value;
       const bedrooms = parseInt(document.getElementById('editPropBeds').value) || 1;
       const suites = parseInt(document.getElementById('editPropSuites').value) || 0;
+      const garage = parseInt(document.getElementById('editPropGarage').value) || 2;
       const area = parseInt(document.getElementById('editPropArea').value) || 50;
-      const featuresRaw = document.getElementById('editPropFeatures').value;
+      const externalLink = document.getElementById('editPropExternalLink').value.trim();
+      const featuresRaw = document.getElementById('editPropFeatures').value.trim();
       const features = featuresRaw ? featuresRaw.split(',').map(s => s.trim()).filter(Boolean) : state.properties[idx].features;
-      const description = document.getElementById('editPropDesc').value;
-      const imageUrl = document.getElementById('editPropImage').value || state.properties[idx].imageUrl;
+      const description = document.getElementById('editPropDesc').value.trim();
+
+      // Extract up to 5 photos
+      let imagesList = (tempEditPropImages || []).map(f => f.medium || f.url || f.base64).filter(Boolean);
+      if (!imagesList.length) {
+        imagesList = state.properties[idx].images || [state.properties[idx].imageUrl];
+      }
 
       state.properties[idx] = {
         ...state.properties[idx],
         title,
+        modality,
         price,
+        rentalPrice,
         condoPrice,
+        iptuPrice,
         neighborhood,
         city,
         type,
         status,
         bedrooms,
         suites,
+        garage,
         area,
+        externalLink,
         features,
         description,
-        imageUrl
+        imageUrl: imagesList[0],
+        images: imagesList.slice(0, 5)
       };
 
       syncStateToStorage();
       closeModal('editPropModal');
-      triggerToast(`Imóvel "${title}" atualizado com sucesso!`, 'success');
+      triggerToast(`✓ Imóvel "${title}" gravado com sucesso!`, 'success');
 
       renderVisitorCardProperties();
       if (state.activeTab === 'properties') renderPortfolioList();
@@ -1860,36 +2463,58 @@
 
     function handleNewPropertySubmit(e) {
       e.preventDefault();
-      const title = document.getElementById('addPropTitle').value;
-      const price = parseFloat(document.getElementById('addPropPrice').value);
-      const neigh = document.getElementById('addPropNeighborhood').value;
-      const beds = parseInt(document.getElementById('addPropBeds').value);
-      const suites = parseInt(document.getElementById('addPropSuites').value);
-      const area = parseInt(document.getElementById('addPropArea').value);
-      const img = document.getElementById('addPropImage').value;
+      const title = document.getElementById('addPropTitle').value.trim();
+      const modality = document.getElementById('addPropModality').value;
+      const price = parseFloat(document.getElementById('addPropPrice').value) || 0;
+      const rentalPrice = parseFloat(document.getElementById('addPropRentalPrice').value) || 0;
+      const condoPrice = parseFloat(document.getElementById('addPropCondoPrice').value) || 0;
+      const iptuPrice = parseFloat(document.getElementById('addPropIptuPrice').value) || 0;
+      const type = document.getElementById('addPropType').value;
+      const neigh = document.getElementById('addPropNeighborhood').value.trim();
+      const city = document.getElementById('addPropCity').value.trim() || "Belém";
+      const beds = parseInt(document.getElementById('addPropBeds').value) || 1;
+      const suites = parseInt(document.getElementById('addPropSuites').value) || 0;
+      const garage = parseInt(document.getElementById('addPropGarage').value) || 2;
+      const area = parseInt(document.getElementById('addPropArea').value) || 50;
+      const externalLink = document.getElementById('addPropExternalLink').value.trim();
+      const featuresRaw = document.getElementById('addPropFeatures').value.trim();
+      const features = featuresRaw ? featuresRaw.split(',').map(s => s.trim()).filter(Boolean) : ["Alto Padrão", "Exclusivo"];
+      const desc = document.getElementById('addPropDesc').value.trim();
+
+      // Extract up to 5 photos from tempAddPropImages
+      let imagesList = (tempAddPropImages || []).map(f => f.medium || f.url || f.base64).filter(Boolean);
+      if (!imagesList.length) {
+        imagesList = ["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80"];
+      }
 
       const newP = {
         id: `prop-${Date.now()}`,
         title,
+        modality,
         price,
-        condoPrice: 800,
+        rentalPrice,
+        condoPrice,
+        iptuPrice,
         neighborhood: neigh,
-        city: "Belém",
-        type: "Apartamento",
+        city,
+        type,
         status: "Disponível",
         bedrooms: beds,
         suites,
+        garage,
         area,
-        imageUrl: img,
-        description: "Imóvel recém integrado ao portfólio SmartBroker CRM.",
-        features: ["Sacada Gourmet", "Alto Padrão", "Nascente"]
+        imageUrl: imagesList[0],
+        images: imagesList.slice(0, 5),
+        externalLink,
+        description: desc || "Imóvel de alto luxo adicionado ao portfólio SmartBroker CRM.",
+        features
       };
 
-      state.properties.push(newP);
+      state.properties.unshift(newP);
       syncStateToStorage();
       closeModal('addPropModal');
       document.getElementById('addPropForm').reset();
-      triggerToast("Imóvel cadastrado no CRM!", 'success');
+      triggerToast(`✓ Imóvel "${title}" cadastrado com sucesso!`, 'success');
       
       renderVisitorCardProperties(); // Sync client drawer view
 
@@ -2833,27 +3458,82 @@
     // ==========================================
     // DRAWER MOCK MOBILE RENDER CARDS
     // ==========================================
+    let visitorActiveFilter = 'all';
+
+    function setVisitorPropFilter(mod) {
+      visitorActiveFilter = mod;
+      ['all', 'venda', 'aluguel'].forEach(m => {
+        const btn = document.getElementById(`vFilter-${m}`);
+        if (btn) {
+          if (m === mod) {
+            btn.className = "px-2 py-0.5 rounded-md text-[8px] font-bold bg-amber-500 text-black cursor-pointer transition";
+          } else {
+            btn.className = "px-2 py-0.5 rounded-md text-[8px] font-bold bg-slate-900 text-slate-400 border border-slate-800 hover:text-white cursor-pointer transition";
+          }
+        }
+      });
+      renderVisitorCardProperties();
+    }
+
     function renderVisitorCardProperties() {
       const list = document.getElementById('visitorCardPropertiesList');
+      if (!list) return;
       list.innerHTML = '';
 
-      state.properties.forEach(prop => {
+      const filtered = state.properties.filter(prop => {
+        if (visitorActiveFilter === 'venda') return prop.modality === 'venda' || prop.modality === 'ambos';
+        if (visitorActiveFilter === 'aluguel') return prop.modality === 'aluguel' || prop.modality === 'ambos';
+        return true;
+      });
+
+      if (!filtered.length) {
+        list.innerHTML = `<p class="text-[9px] text-slate-500 text-center py-4 italic font-mono">Nenhum imóvel disponível para ${visitorActiveFilter === 'aluguel' ? 'locação' : 'venda'}.</p>`;
+        return;
+      }
+
+      filtered.forEach(prop => {
+        let priceStr = '';
+        if (prop.modality === 'aluguel') {
+          priceStr = `Locação: <span class="text-emerald-400 font-bold font-mono">R$ ${(prop.rentalPrice || 0).toLocaleString('pt-BR')}/mês</span>`;
+        } else if (prop.modality === 'ambos') {
+          priceStr = `<span class="text-amber-400 font-bold font-mono">R$ ${(prop.price || 0).toLocaleString('pt-BR')}</span> <span class="text-slate-500">•</span> <span class="text-emerald-400 font-mono text-[8px]">R$ ${(prop.rentalPrice || 0).toLocaleString('pt-BR')}/mês</span>`;
+        } else {
+          priceStr = `Venda: <span class="text-amber-400 font-bold font-mono">R$ ${(prop.price || 0).toLocaleString('pt-BR')}</span>`;
+        }
+
+        const tagText = prop.modality === 'aluguel' ? '🔑 ALUGUEL' : (prop.modality === 'ambos' ? '🏷️🔑 VENDA/ALUGUEL' : '🏷️ VENDA');
+        const numPhotos = (prop.images && prop.images.length) ? prop.images.length : 1;
+
         const item = `
-          <div class="bg-slate-900 border border-slate-850 p-2.5 rounded-xl text-left flex items-start gap-2.5 relative group">
-            <img src="${prop.imageUrl}" class="h-10 w-16 object-cover rounded-lg">
+          <div class="bg-slate-900 border border-slate-850 p-2.5 rounded-xl text-left flex items-start gap-2.5 relative group hover:border-amber-500/30 transition">
+            <div class="relative shrink-0">
+              <img src="${prop.imageUrl}" class="h-12 w-16 object-cover rounded-lg">
+              <span class="absolute bottom-0.5 right-0.5 bg-slate-950/80 text-[7.5px] font-mono text-slate-300 px-1 rounded">📸 ${numPhotos}</span>
+            </div>
+            
             <div class="flex-1 min-w-0">
-              <h5 class="font-extrabold text-[10px] text-white truncate uppercase">${prop.title}</h5>
-              <p class="text-[9px] text-slate-500 leading-none mt-0.5">R$ ${prop.price.toLocaleString('pt-BR')}</p>
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-[7.5px] font-mono font-bold text-amber-400 uppercase">${tagText}</span>
+                <span class="text-[7.5px] text-slate-500 font-mono">${prop.type}</span>
+              </div>
+              <h5 class="font-extrabold text-[10px] text-white truncate uppercase mt-0.5">${prop.title}</h5>
+              <p class="text-[8.5px] text-slate-400 leading-tight mt-0.5">${priceStr}</p>
               
-              <div class="flex gap-2 mt-2">
-                <button onclick="triggerVisitorBAction('favorite', '${prop.title}')" class="text-[8px] bg-amber-500/10 text-amber-500 px-1 font-bold rounded hover:bg-amber-500/20">❤ Favoritar</button>
-                <button onclick="triggerVisitorBAction('view_property', '${prop.title}')" class="text-[8px] text-slate-400 hover:text-white px-1 leading-none rounded">Ver Detalhes</button>
+              <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+                <button onclick="triggerVisitorBAction('favorite', '${prop.title}')" class="text-[8px] bg-amber-500/10 hover:bg-amber-500/25 text-amber-500 px-1.5 py-0.5 font-bold rounded transition cursor-pointer">❤ Favoritar</button>
+                <button onclick="triggerVisitorBAction('view_property', '${prop.title}')" class="text-[8px] bg-slate-950 hover:bg-slate-800 text-slate-300 px-1.5 py-0.5 font-bold rounded transition cursor-pointer">Ver Detalhes</button>
+                ${prop.externalLink ? `
+                  <a href="${prop.externalLink}" target="_blank" class="text-[8px] bg-sky-500/15 hover:bg-sky-500/30 text-sky-400 px-1.5 py-0.5 font-bold rounded transition flex items-center gap-0.5 cursor-pointer">
+                    <i data-lucide="globe" class="h-2.5 w-2.5"></i> Tour 3D
+                  </a>
+                ` : ''}
               </div>
             </div>
           </div>
         `;
         list.insertAdjacentHTML('beforeend', item);
       });
+      lucide.createIcons();
     }
 
     // TRIGGER VISITOR COMUNICATION CLIENT TO SERVER INJECTOR
@@ -3207,6 +3887,7 @@
 
       const defaultOptions = {
         multi: false,
+        maxCount: options.maxCount || (options.multi ? 5 : 1),
         crop: null, // 'avatar', 'wide', 'landscape', null
         allowedTypes: state.masterSettings.allowedFormats,
         maxSize: state.masterSettings.maxFileSize,
@@ -3215,6 +3896,7 @@
       };
 
       const opts = { ...defaultOptions, ...options };
+      if (!opts.maxCount) opts.maxCount = opts.multi ? 5 : 1;
       const uniqueId = `file-input-${containerId}`;
 
       // Build layouts
@@ -3349,6 +4031,12 @@
         let fileIndex = 0;
 
         function uploadNext() {
+          if (opts.multi && opts.maxCount && opts.imageList.length >= opts.maxCount) {
+            triggerToast(`Limite de ${opts.maxCount} fotos atingido para este cadastro.`, 'info');
+            progressBox.classList.add('hidden');
+            return;
+          }
+
           if (fileIndex >= files.length) {
             progressBox.classList.add('hidden');
             return;
@@ -3411,13 +4099,12 @@
             dimensions: '1200x800',
             thumb: sizes.thumb,
             medium: sizes.medium,
-            original: sizes.original,
-            url: sizes.medium
+            url: sizes.medium || sizes.thumb
           };
 
           state.masterSettings.totalUploadsCount++;
 
-          // Log entry inside state uploads
+          // Log lightweight entry inside state uploads
           state.uploads.unshift({
             id: fileObj.id,
             name: originalName,
@@ -3431,7 +4118,9 @@
           if (!opts.multi) {
             opts.imageList = [fileObj];
           } else {
-            opts.imageList.push(fileObj);
+            if (opts.imageList.length < opts.maxCount) {
+              opts.imageList.push(fileObj);
+            }
           }
 
           if (opts.onUpload) {
@@ -3441,7 +4130,7 @@
           renderList();
           syncStateToStorage();
 
-          triggerToast("Mídia otimizada e gravada com sucesso!", 'success');
+          triggerToast("Foto otimizada e gravada com sucesso!", 'success');
 
           fileIndex++;
           uploadNext();
